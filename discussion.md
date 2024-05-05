@@ -106,6 +106,7 @@ Tail Recursion: One thing we both noticed is the use of tail recursion, particul
 Pattern Matching: The project heavily relies on match to simplify parsing and identify different structures in the AST. This pattern is consistent with how we previously used match for breaking down lists and complex data structures in class exercises.
 Higher-Order Functions: We observed that functions like ifarith->ifarith-tiny and anf->ir-virtual are designed to accept or return other functions. They utilize higher-order functions to map transformations onto the AST nodes, which aligns with how we learned to use functions like map and filter.
 Of course, we also have a lot of our own ideas.
+
 From Boyu Ren Perspective:
 I found the use of the foldl function in intermediate representation processing particularly interesting. This function reduces a list to a single value by applying a function from the left, which is a pattern similar to what we explored earlier in class with accumulators. It’s fascinating how fold-like behavior can be used in compiler passes.
 

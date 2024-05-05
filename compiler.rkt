@@ -120,35 +120,53 @@
 ;; if.
 (define (ifarith->ifarith-tiny e)
   (match e
-    ;; literals
+    ;; 直接返回字面值和符号
     [(? integer? i) i]
-    ['true 'todo]
-    ['false 'todo]
-    [(? symbol? x) 'todo]
-    [`(,(? bop? bop) ,e0 ,e1) 'todo]
-    [`(,(? uop? uop) ,e) 'todo]
-    ;; 0-binding case
-    [`(let* () ,e) 'todo]
-    ;; 1+-binding case
-    [`(let* ([,(? symbol? x0) ,e0]) ,e-body)
-     'todo]
-    [`(let* ([,(? symbol? x0) ,e0] ,rest-binding-pairs ...) ,e-body)
-     'todo]
-    ;; print an arbitrary expression (must be a number at runtime)
-    [`(print ,_)
-     'todo]
-    ;; and/or, with short-circuiting semantics
-    [`(and ,e0) 'todo]
-    [`(and ,e0 ,es ...) 'todo]
-    [`(or ,e0) 'todo]
-    [`(or ,e0 ,es ...) 'todo]
-    ;; if argument is 0, false, otherwise true
-    [`(if ,e0 ,e1 ,e2) 'todo]
-    ;; cond where the last case is else
-    [`(cond [else ,(? ifarith? else-body)])
-     'todo]
-    [`(cond [,c0 ,e0] ,rest ...)
-     'todo]))
+    ['true 'true]
+    ['false 'false]
+    [(? symbol? x) x]
+
+    ;; 处理二元和一元运算表达式
+    [(,(? bop? op) ,e0 ,e1)
+     (,(if (bop? op) op 'error) ,(ifarith->ifarith-tiny e0) ,(ifarith->ifarith-tiny e1))]
+    [(,(? uop? op) ,e)
+     (,(if (uop? op) op 'error) ,(ifarith->ifarith-tiny e))]
+
+    ;; 将 let* 转换为单个绑定的 let
+    [(let* ([,(? symbol? x) ,e0] . ,rest-bindings) ,e-body)
+     (let ([rest-trans (ifarith->ifarith-tiny (if (null? rest-bindings)
+                                                  e-body
+                                                  (let* ,rest-bindings ,e-body)))])
+       (let ([,x ,(ifarith->ifarith-tiny e0)]) ,rest-trans))]
+
+
+    ;; print 转换
+    [(print ,e)
+     (print ,(ifarith->ifarith-tiny e))]
+
+    ;; and 和 or 转换为使用 if 的形式
+    [(and ,e0 . ,rest-es)
+     (if (null? rest-es)
+         (process e0)
+         (and ,e0 ,@(map process rest-es)))]
+    
+    [(or ,e0 . ,rest-es)
+     (if (null? rest-es)
+         (if ,(ifarith->ifarith-tiny e0) true false)
+         (if ,(ifarith->ifarith-tiny e0) true ,(ifarith->ifarith-tiny (or ,@rest-es))))]
+
+    ;; if 表达式转换
+    [(if ,e0 ,e1 ,e2)
+     (if ,(ifarith->ifarith-tiny e0) ,(ifarith->ifarith-tiny e1) ,(ifarith->ifarith-tiny e2))]
+
+    ;; cond 转换为使用 if 的形式
+    [(cond [else ,e])
+     (ifarith->ifarith-tiny e)]
+    [(cond [,c0 ,e0] . ,rest-cases)
+     (if ,(ifarith->ifarith-tiny c0)
+          ,(ifarith->ifarith-tiny e0)
+          ,(ifarith->ifarith-tiny `(cond ,@rest-cases)))]))
+
 
 ;; Stage 3: Administrative Normal Form (ANF)
 ;; 
